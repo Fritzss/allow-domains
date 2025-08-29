@@ -1,0 +1,47 @@
+# Конфигурация для получения подсетей
+bgp_tools_url: "https://bgp.tools/table.txt"
+headers:
+  User-Agent: "itdog.info - hi@itdog.info"
+
+# Директории для хранения файлов
+ipv4_dir: "Subnets/IPv4"
+routeros_dir: "RouterOS"
+
+# Шлюз по умолчанию для маршрутизации
+gateway: "192.168.1.1"
+
+# Шаблоны для автоматического формирования имен
+name_templates:
+  file: "{name}.lst"
+  list_name: "{name_upper}"
+  comment: "{name_title} networks"
+
+# AS номера
+as_numbers:
+  "32934":  # Meta (Facebook)
+    name: "meta"
+  "13414":  # Twitter
+    name: "twitter"
+  "24940":  # Hetzner
+    name: "hetzner"
+  "16276":  # OVH
+    name: "ovh"
+
+# Сервисы
+services:
+  discord:
+    url: "https://iplist.opencck.org/?format=text&data=cidr4&site=discord.gg&site=discord.media"
+    name: "discord"
+  telegram:
+    url: "https://core.telegram.org/resources/cidr.txt"
+    name: "telegram"
+  cloudflare:
+    url: "https://www.cloudflare.com/ips-v4"
+    name: "cloudflare"
+
+# Кастомные настройки (переопределяют шаблоны при необходимости)
+custom_settings:
+  "32934":
+    comment: "Meta (Facebook) networks"
+  discord:
+    list_name: "DISCORD_VOICE"
