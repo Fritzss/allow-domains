@@ -1,0 +1,47 @@
+bgp_tools_url: "https://bgp.tools/table.txt"
+user_agent: "itdog.info - hi@itdog.info"
+ipv4_dir: "Subnets/IPv4"
+ipv6_dir: "Subnets/IPv6"
+routeros_dir: "RouterOS"
+
+as_numbers:
+  "32934":
+    file: "meta.lst"
+    list_name: "meta"
+    comment: "META"
+  "13414":
+    file: "twitter.lst"
+    list_name: "twitter"
+    comment: "TWITTER"
+  "24940":
+    file: "hetzner.lst"
+    list_name: "hetzner"
+    comment: "HETZNER"
+  "16276":
+    file: "ovh.lst"
+    list_name: "ovh"
+    comment: "OVH"
+
+additional_as:
+  # Добавьте здесь дополнительные AS номера
+  # "12345":
+  #   file: "myas.lst"
+  #   list_name: "myas"
+  #   comment: "MYAS"
+
+discord:
+  voice_v4: "https://iplist.opencck.org/?format=text&data=cidr4&site=discord.gg&site=discord.media"
+  voice_v6: "https://iplist.opencck.org/?format=text&data=cidr6&site=discord.gg&site=discord.media"
+  file: "discord.lst"
+  list_name: "discord"
+
+telegram:
+  cidr_url: "https://core.telegram.org/resources/cidr.txt"
+  file: "telegram.lst"
+  list_name: "telegram"
+
+cloudflare:
+  v4: "https://www.cloudflare.com/ips-v4"
+  v6: "https://www.cloudflare.com/ips-v6"
+  file: "cloudflare.lst"
+  list_name: "cloudflare"

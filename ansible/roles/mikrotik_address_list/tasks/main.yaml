@@ -1,0 +1,103 @@
+---
+- name: Gather RouterOS facts
+  community.routeros.facts:
+    gather_network: false
+    gather_resources: false
+  register: ros_facts
+
+- name: Determine RouterOS version and protocol support
+  set_fact:
+    ros_version: "{{ 'v7' if ros_facts.facts.version is version('7.0', '>=') else 'v6' }}"
+    has_ipv6: "{{ ros_facts.facts.ipv6_package is defined and ros_facts.facts.ipv6_package | bool }}"
+
+- name: Find address list files
+  find:
+    paths: "{{ role_path }}/files/{{ ros_version }}"
+    patterns: "*.rsc"
+  register: address_list_files
+  delegate_to: localhost
+
+- name: Extract list names from file names
+  set_fact:
+    address_lists: "{{ address_lists | default([]) + [{'name': item | basename | replace('_ipv4.rsc', '') | replace('_ipv6.rsc', '')}] }}"
+  loop: "{{ address_list_files.files | map(attribute='path') | list }}"
+  delegate_to: localhost
+  when: item | basename is match(".*_ipv[46]\\.rsc$")
+
+- name: Ensure unique list names
+  set_fact:
+    address_lists: "{{ address_lists | unique }}"
+
+- name: Generate apply_rules.rsc script
+  template:
+    src: apply_rules.rsc.j2
+    dest: "/tmp/apply_rules.rsc"
+    vars:
+      ros_version: "{{ ros_version }}"
+      has_ipv6: "{{ has_ipv6 }}"
+      address_lists: "{{ address_lists }}"
+  delegate_to: localhost
+
+- name: Get hash of the generated script
+  stat:
+    path: "/tmp/apply_rules.rsc"
+  register: script_stat
+  delegate_to: localhost
+
+- name: Calculate script hash
+  hash:
+    path: "/tmp/apply_rules.rsc"
+    algo: sha256
+  register: script_hash
+  delegate_to: localhost
+  when: script_stat.stat.exists
+
+- name: Check for previous script hash
+  stat:
+    path: "{{ role_path }}/.previous_script_hash"
+  register: previous_hash_file
+  delegate_to: localhost
+
+- name: Read previous hash if exists
+  slurp:
+    src: "{{ role_path }}/.previous_script_hash"
+  register: previous_hash
+  delegate_to: localhost
+  when: previous_hash_file.stat.exists
+
+- name: Set script_changed fact
+  set_fact:
+    script_changed: "{{ not previous_hash_file.stat.exists or (previous_hash.content | b64decode | trim) != script_hash.hash }}"
+  delegate_to: localhost
+  when: script_stat.stat.exists
+
+- name: Apply script if changed
+  block:
+    - name: Upload script to MikroTik
+      community.routeros.upload:
+        src: "/tmp/apply_rules.rsc"
+        dst: "apply_rules.rsc"
+
+    - name: Execute script on MikroTik
+      community.routeros.command:
+        commands:
+          - /import file-name="apply_rules.rsc"
+
+    - name: Remove script from MikroTik
+      community.routeros.command:
+        commands:
+          - /file remove "apply_rules.rsc"
+
+    - name: Save the new script hash
+      copy:
+        content: "{{ script_hash.hash }}"
+        dest: "{{ role_path }}/.previous_script_hash"
+      delegate_to: localhost
+  when: script_stat.stat.exists and script_changed | bool
+
+- name: Cleanup temporary script file
+  file:
+    path: "/tmp/apply_rules.rsc"
+    state: absent
+  delegate_to: localhost
+  when: script_stat.stat.exists

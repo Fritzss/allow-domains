@@ -1,0 +1,39 @@
+{# Set appropriate paths based on RouterOS version #}
+{% if ros_version == 'v7' %}
+  {% set ip_mangle_path = '/ip/firewall/mangle' %}
+  {% set ip_route_path = '/ip/route' %}
+  {% set ipv6_mangle_path = '/ipv6/firewall/mangle' %}
+  {% set ipv6_route_path = '/ipv6/route' %}
+{% else %}
+  {% set ip_mangle_path = '/ip firewall mangle' %}
+  {% set ip_route_path = '/ip route' %}
+  {% set ipv6_mangle_path = '/ipv6 firewall mangle' %}
+  {% set ipv6_route_path = '/ipv6 route' %}
+{% endif %}
+
+{# Remove existing rules with our comments #}
+{% for list in address_lists %}
+do {{{ ip_mangle_path }}} remove [find comment="ansible-managed {{ list.name }} ipv4 mangle"] on-error={}
+do {{{ ip_route_path }}} remove [find comment="ansible-managed {{ list.name }} ipv4 route"] on-error={}
+{% if has_ipv6 %}
+do {{{ ipv6_mangle_path }}} remove [find comment="ansible-managed {{ list.name }} ipv6 mangle"] on-error={}
+do {{{ ipv6_route_path }}} remove [find comment="ansible-managed {{ list.name }} ipv6 route"] on-error={}
+{% endif %}
+{% endfor %}
+
+{# Add new rules #}
+{% for list in address_lists %}
+{# IPv4 mangle rule #}
+do {{{ ip_mangle_path }}} add action=mark-routing chain=prerouting connection-mark=no-mark dst-address-list={{ list.name }}_ipv4 new-routing-mark=R-{{ list.name }} passthrough=no comment="ansible-managed {{ list.name }} ipv4 mangle" on-error={}
+
+{# IPv4 route rule #}
+do {{{ ip_route_path }}} add distance=1 dst-address=0.0.0.0/0 type=blackhole routing-mark=R-{{ list.name }} comment="ansible-managed {{ list.name }} ipv4 route" on-error={}
+
+{% if has_ipv6 %}
+{# IPv6 mangle rule #}
+do {{{ ipv6_mangle_path }}} add action=mark-routing chain=prerouting connection-mark=no-mark dst-address-list={{ list.name }}_ipv6 new-routing-mark=R6-{{ list.name }} passthrough=no comment="ansible-managed {{ list.name }} ipv6 mangle" on-error={}
+
+{# IPv6 route rule #}
+do {{{ ipv6_route_path }}} add distance=1 dst-address=::/0 type=blackhole routing-mark=R6-{{ list.name }} comment="ansible-managed {{ list.name }} ipv6 route" on-error={}
+{% endif %}
+{% endfor %}
